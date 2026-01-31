@@ -1,6 +1,65 @@
 import { GameMode, Scenario, Badge, StreakBadge } from './types';
+import { 
+  TEENS_SCENARIOS, 
+  YOUNG_ADULT_SCENARIOS, 
+  ADULT_SCENARIOS,
+  GENERAL_POOL_SCENARIOS,
+  getRandomizedScenarios,
+  getDifficultyWeightedScenarios,
+  getScenariosWithFallback,
+  getEndlessModeScenarios,
+  resetScenarioTracking,
+  TOTAL_SCENARIO_COUNT
+} from './scenarios';
 
-export const OFFLINE_SCENARIOS: Scenario[] = [
+// Re-export scenario utilities for easy access
+export { 
+  getRandomizedScenarios, 
+  getDifficultyWeightedScenarios,
+  getScenariosWithFallback,
+  getEndlessModeScenarios,
+  resetScenarioTracking,
+  GENERAL_POOL_SCENARIOS,
+  TOTAL_SCENARIO_COUNT
+};
+
+// Difficulty settings - affects timer and scoring
+export const DIFFICULTY_SETTINGS = {
+  easy: {
+    baseTimer: 25,
+    streakTimerReduction: [20, 18, 15, 12, 10],
+    pointsCorrect: 15,
+    pointsWrong: -30,
+    redFlagRatio: 0.5
+  },
+  medium: {
+    baseTimer: 20,
+    streakTimerReduction: [20, 15, 10, 8, 5],
+    pointsCorrect: 10,
+    pointsWrong: -50,
+    redFlagRatio: 0.6
+  },
+  hard: {
+    baseTimer: 15,
+    streakTimerReduction: [15, 10, 7, 5, 3],
+    pointsCorrect: 10,
+    pointsWrong: -75,
+    redFlagRatio: 0.7
+  },
+  extreme: {
+    baseTimer: 10,
+    streakTimerReduction: [10, 7, 5, 3, 2],
+    pointsCorrect: 10,
+    pointsWrong: -100,
+    redFlagRatio: 0.8
+  }
+};
+
+// Default difficulty
+export const DEFAULT_DIFFICULTY: keyof typeof DIFFICULTY_SETTINGS = 'hard';
+
+// Original scenarios (kept for backward compatibility)
+const ORIGINAL_SCENARIOS: Scenario[] = [
   // =================================================================
   // TEENS (50 Scenarios: ~33 Red, ~17 Green)
   // Focus: Romance, School Drama, Puppy Love, Social Media
@@ -732,3 +791,42 @@ export const STREAK_BADGES: StreakBadge[] = (function() {
   }
   return badges;
 })();
+
+// Fisher-Yates shuffle for randomization
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+// Combine original scenarios with new scenarios from scenario files
+// This creates a massive pool of 600+ scenarios!
+export const OFFLINE_SCENARIOS: Scenario[] = shuffleArray([
+  ...ORIGINAL_SCENARIOS,
+  ...TEENS_SCENARIOS,
+  ...YOUNG_ADULT_SCENARIOS,
+  ...ADULT_SCENARIOS
+]);
+
+// Get scenarios by category with random order
+export function getScenariosByCategory(mode: GameMode): Scenario[] {
+  return shuffleArray(OFFLINE_SCENARIOS.filter(s => s.category === mode));
+}
+
+// Get all scenarios count info
+export const SCENARIO_COUNTS = {
+  original: ORIGINAL_SCENARIOS.length,
+  newTeens: TEENS_SCENARIOS.length,
+  newYoungAdult: YOUNG_ADULT_SCENARIOS.length,
+  newAdult: ADULT_SCENARIOS.length,
+  generalPool: GENERAL_POOL_SCENARIOS.length,
+  total: OFFLINE_SCENARIOS.length + GENERAL_POOL_SCENARIOS.length
+};
+
+// Get all scenarios including general pool (for endless mode)
+export function getAllScenariosWithBackup(): Scenario[] {
+  return shuffleArray([...OFFLINE_SCENARIOS, ...GENERAL_POOL_SCENARIOS]);
+}
